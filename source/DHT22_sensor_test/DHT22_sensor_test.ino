@@ -1,7 +1,5 @@
 #include "DHT.h"
-
 #define DHTPIN 2
-
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 
 // Connect pin 1 (on the left) of the sensor to +5V
@@ -10,31 +8,61 @@
 // Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
 
 DHT dht(DHTPIN, DHTTYPE);
+String inputString = "";
+String getTempCommand = "GetTemp";
+boolean stringComplete = false;
 
 void setup() {
   Serial.begin(9600); 
-  Serial.println("DHTxx test!");
+  Serial.println("DHTxx test! Send commecnd GetTemp to get sensor data.");
  
+  inputString.reserve(200);
   dht.begin();
 }
 
 void loop() {
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
-  // check if returns are valid, if they are NaN (not a number) then something went wrong!
-  if (isnan(t) || isnan(h)) {
-    Serial.println("Failed to read from DHT");
-  } else {
-    Serial.print("Humidity: "); 
-    Serial.print(h);
-    Serial.print(" %\t");
-    Serial.print("Temperature: "); 
-    Serial.print(t);
-    Serial.println(" *C");
-  }
   
-  delay(1000);
+  if (stringComplete)
+  {
+    String trunkInputString = inputString.substring(0,7);
+    
+    if(trunkInputString.equalsIgnoreCase(getTempCommand))
+    {
+      float h = dht.readHumidity();
+      float t = dht.readTemperature();
+  
+      if (isnan(t) || isnan(h)) {
+        Serial.println("Failed to read from DHT");
+      } else {
+        Serial.print("Humidity: ");
+        Serial.print(h);
+        Serial.print(" %\t");
+        Serial.print("Temperature: ");
+        Serial.print(t);
+        Serial.println("*C");
+      }
+      
+      inputString = "";
+      stringComplete = false;
+    }
+    else
+    {
+      Serial.print("Waiting for: ");
+      Serial.println(getTempCommand);
+
+      Serial.print("Got: ");
+      Serial.println(inputString.substring(0,7));
+    }
+  }
+}
+
+void serialEvent() {
+  while (Serial.available()) {
+
+    char inChar = (char)Serial.read(); 
+    inputString += inChar;
+    if (inChar == '\n') {
+      stringComplete = true;
+    } 
+  }
 }
